@@ -1,0 +1,59 @@
+version: "3.9"
+
+x-worker-common: &worker-common
+  image: transcoder-worker:latest
+  runtime: nvidia
+  environment:
+    REDIS_HOST: ${REDIS_HOST}
+  volumes:
+    - /media:/media:ro
+    - ./configs:/configs
+    - /media_cache:/media_cache
+  network_mode: host
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - capabilities: [gpu]
+            device_ids: ["${GPU_ID}"]
+
+services:
+  transcoder_worker_0:
+    <<: *worker-common
+    container_name: transcoder_worker_0
+    command: >
+      python3 transcoder_worker.py
+      --redis_host ${REDIS_HOST}
+      --gpu_id ${GPU_ID}
+      --worker_id 0
+      --config_path ${SERVER_CONFIG_PATH}
+
+  transcoder_worker_1:
+    <<: *worker-common
+    container_name: transcoder_worker_1
+    command: >
+      python3 transcoder_worker.py
+      --redis_host ${REDIS_HOST}
+      --gpu_id ${GPU_ID}
+      --worker_id 1
+      --config_path ${SERVER_CONFIG_PATH}
+
+  transcoder_worker_2:
+    <<: *worker-common
+    container_name: transcoder_worker_2
+    command: >
+      python3 transcoder_worker.py
+      --redis_host ${REDIS_HOST}
+      --gpu_id ${GPU_ID}
+      --worker_id 2
+      --config_path ${SERVER_CONFIG_PATH}
+
+  transcoder_worker_3:
+    <<: *worker-common
+    container_name: transcoder_worker_3
+    command: >
+      python3 transcoder_worker.py
+      --redis_host ${REDIS_HOST}
+      --gpu_id ${GPU_ID}
+      --worker_id 3
+      --config_path ${SERVER_CONFIG_PATH}

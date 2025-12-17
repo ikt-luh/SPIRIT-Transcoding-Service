@@ -66,3 +66,96 @@ To run the container, start it interactively with
 ```
     just run-transcoder
 ```
+## NVIDIA Drivers
+```
+# JUST (Makes life easier)
+git clone https://mpr.makedeb.org/just
+cd just
+makedeb -si 
+
+sudo apt update
+
+# NVIDIA DRIVERS
+sudo apt install --no-install-recommends -y build-essential
+sudo apt install --no-install-recommends -y nvidia-driver-570
+
+# DOCKER
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+After installation, you need to reboot (NVIDIA driver requires a reboot)
+
+## Shared Filesystem
+We will setup a shared file system (NFS) for the Media Server and the GPU Servers for /media and /media_cache
+### On the server
+``` 
+sudo apt update
+sudo apt install -y nfs-kernel-server
+
+sudo mkdir -p /srv/media
+sudo mkdir -p /srv/media_cache
+
+sudo chown -R nobody:nogroup /srv/media /srv/media_cache
+sudo chmod -R 777 /srv/media /srv/media_cache # Careful, not safe
+```
+
+and then add the following to /etc/exports:
+```
+/srv/media        *(ro,sync,no_subtree_check,no_root_squash)
+/srv/media_cache  *(rw,sync,no_subtree_check,no_root_squash)
+```
+apply:
+```
+sudo exportfs -ra
+sudo systemctl restart nfs-kernel-server
+```
+
+Verify with 
+```
+sudo exportfs -v
+```
+finally, mount:
+```
+sudo apt install -y nfs-common
+sudo mkdir -p /media
+sudo mkdir -p /media_cache
+sudo mount 127.0.0.1:/srv/media /media
+sudo mount 127.0.0.1:/srv/media_cache /media_cache
+```
+then add the following to /etc/fstab:
+```
+127.0.0.1:/srv/media       /media        nfs defaults,_netdev 0 0
+127.0.0.1:/srv/media_cache /media_cache  nfs defaults,_netdev 0 0
+```
+
+### On the Workers:
+```
+sudo apt install -y nfs-common
+sudo mkdir -p /media
+sudo mkdir -p /media_cache
+sudo mount 192.168.XX.XX:/srv/media /media
+sudo mount 192.168.XX.XX:/srv/media_cache /media_cache
+```
+
+then add the following to /etc/fstab:
+```
+192.168.XX.XX:/srv/media       /media        nfs defaults,_netdev 0 0
+192.168.XX.XX:/srv/media_cache /media_cache  nfs defaults,_netdev 0 0
+```
+

@@ -2,13 +2,15 @@ import os
 import yaml
 import time
 import asyncio
+import redis
 from pathlib import Path
 from collections import defaultdict
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 
-from transcoder_pool import TranscoderPool
+#from transcoder_pool import TranscoderPool
+from redis_transcoder_pool import RedisTranscoderPool
 from cache import LRUCache
 from utils.media_setup import prepare_media
 from utils.logger import CSVLogger
@@ -52,7 +54,6 @@ async def startup_event():
     with open(SERVER_CONFIG_PATH, "r") as f:
         cfg = yaml.safe_load(f)
 
-    gpu_plan = cfg.get("gpu_plan", {0: 1})
     coding_config = cfg["transcoder"]
     sequence_config = cfg["sequences"]
     cache_size = cfg["cache_size"] # in MB
@@ -86,8 +87,10 @@ async def startup_event():
         ["timestamp", "event", "key", "cache_items", "cache_bytes"]
     )
 
-    worker_pool = TranscoderPool(gpu_plan, coding_config, transcoder_logger)
-    worker_pool.start()
+    redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
+    worker_pool = RedisTranscoderPool(redis_host, logger=transcoder_logger)
+    #worker_pool = TranscoderPool(gpu_plan, coding_config, transcoder_logger)
+    #worker_pool.start()
 
     cache = LRUCache(max_bytes = cache_size * 1024 * 1024, logger=cache_logger) # MB
 
@@ -185,7 +188,7 @@ async def handle_request(req_path: str, request: Request):
 
 async def transcode_segment(config_id, src_path, tmp_path, final_path, segment_id, request_timestamp,
                             media_identifier, requested_repr, client_id):
-    job_id = worker_pool.submit(config_id, src_path, tmp_path)
+    job_id = await worker_pool.submit(config_id, src_path, tmp_path)
 
     ok = await worker_pool.wait_job(job_id, timeout=segment_timeout)
     if not ok:
@@ -286,7 +289,7 @@ async def prefetch_segment(segment_id):
         if not os.path.exists(src_path):
             return #Might not have another segment
 
-        job_id = worker_pool.submit(config["id"], src_path, tmp_path)
+        job_id = await worker_pool.submit(config["id"], src_path, tmp_path)
         ok = await worker_pool.wait_job(job_id, timeout=segment_timeout)
 
         if ok and os.path.exists(tmp_path):

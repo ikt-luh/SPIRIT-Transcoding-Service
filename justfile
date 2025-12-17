@@ -48,7 +48,7 @@ start-server CONFIG_NAME:
     echo "SERVER_CONFIG_PATH=/configs/media_server/{{CONFIG_NAME}}.yaml" >> .env
     echo "UID=$$(id -u)" >> .env
     echo "GID=$$(id -g)" >> .env
-    docker compose --env-file .env -f docker-compose.yaml --profile build-only up --build
+    docker compose --env-file .env -f docker-compose.mediaserver.yaml --profile build-only up --build
 
 start-server-d CONFIG_NAME:
     echo "MEDIA_DIR=/media/{{CONFIG_NAME}}" > .env
@@ -76,3 +76,15 @@ decode-vpcc IN_PATH:
         --inverseColorSpaceConversionConfig=/pyrabbit/dependencies/mpeg-pcc-tmc2/cfg/hdrconvert/yuv420torgb444.cfg \
         --reconstructedDataPath=dec_%04d.ply \
         --keepIntermediateFiles=0
+
+
+# Transcoding worker
+# Build the transcoder worker image
+build-worker:
+    docker build -f docker/Worker.Dockerfile -t transcoder-worker:latest .
+
+# Run a transcoder worker
+start-worker CONFIG_NAME SERVER_IP:
+    REDIS_HOST={{SERVER_IP}} GPU_ID=0 \
+    SERVER_CONFIG_PATH=/configs/media_server/{{CONFIG_NAME}}.yaml \
+    docker compose -f docker-compose.worker.yaml up -d
