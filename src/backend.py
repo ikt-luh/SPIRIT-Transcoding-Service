@@ -17,7 +17,7 @@ from utils.logger import CSVLogger
 
 SERVER_CONFIG_PATH = os.getenv("SERVER_CONFIG_PATH", "/app/config.yaml")
 MEDIA_DIR = os.getenv("MEDIA_DIR", "/media")
-TMP_DIR = "/tmp/transcoded_segments"
+TMP_DIR = "/media_cache"
 
 #POLL_INTERVAL = 0.1    # seconds
 
@@ -208,6 +208,7 @@ async def transcode_segment(config_id, src_path, tmp_path, final_path, segment_i
         )
         raise HTTPException(status_code=504, detail="Segment transcoding timeout")
 
+    print(tmp_path)
     if not os.path.exists(tmp_path):
         raise HTTPException(status_code=504, detail="Segment transcoding failed (no output)")
 

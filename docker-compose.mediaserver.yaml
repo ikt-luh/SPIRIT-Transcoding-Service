@@ -17,6 +17,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
     volumes:
       - /media:/media
+      - /media_cache:/media_cache
       - ./configs:/configs
       - ./results:/results
     logging:

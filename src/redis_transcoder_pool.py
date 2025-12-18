@@ -41,21 +41,20 @@ class RedisTranscoderPool:
         return job_id
 
     async def wait_job(self, job_id: str, timeout: float = 30):
+        key = f"job_done:{job_id}"
         start = time.time()
+    
         while True:
-            done_job = self.r.lpop("transcoder_done")
-            if done_job:
+            if self.r.exists(key):
                 async with self.lock:
-                    if done_job == job_id:
-                        self.inflight.remove(job_id)
-                        return True
-
-            if (time.time() - start) > timeout:
+                    self.inflight.discard(job_id)
+                return True
+    
+            if time.time() - start > timeout:
                 async with self.lock:
-                    if job_id in self.inflight:
-                        self.inflight.remove(job_id)
+                    self.inflight.discard(job_id)
                 return False
-
+    
             await asyncio.sleep(0.05)
 
     def current_queue_length(self):

@@ -75,14 +75,17 @@ def worker_process(redis_host="192.168.1.10", gpu_id=0, worker_id=0, configs=Non
 
             log("write_start", job_id)
             bitio.write(contexts, out_path)
+            os.sync()
             log("write_end", job_id)
 
             # push job completion to Redis
-            r.rpush("transcoder_done", job_id)
+            #r.rpush("transcoder_done", job_id)
+            r.setex(f"job_done:{job_id}", 60, "ok")
 
         except Exception as e:
             log(f"error: {e}", job_id)
-            r.rpush("transcoder_done", job_id)
+            #r.rpush("transcoder_done", job_id)
+            r.setex(f"job_done:{job_id}", 60, "ok")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GPU Transcoder Worker")
