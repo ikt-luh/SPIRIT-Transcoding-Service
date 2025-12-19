@@ -17,6 +17,10 @@ services:
       - /media_cache:/media_cache
       - ./configs:/configs
       - ./results:/results
+      - type: tmpfs
+        target: /media_ram
+      - type: tmpfs
+        target: /media_cache_ram
     logging:
       driver: "none"
     networks:

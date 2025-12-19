@@ -15,9 +15,31 @@ from cache import LRUCache
 from utils.media_setup import prepare_media
 from utils.logger import CSVLogger
 
+import shutil
+
+
 SERVER_CONFIG_PATH = os.getenv("SERVER_CONFIG_PATH", "/app/config.yaml")
 MEDIA_DIR = os.getenv("MEDIA_DIR", "/media")
 TMP_DIR = "/media_cache"
+
+## Copy everything to RAM
+RAM_MEDIA_DIR = "/media_ram"
+RAM_CACHE_DIR = "/media_cache_ram"
+
+# Copy MEDIA_DIR contents into RAM
+if not os.listdir(RAM_MEDIA_DIR):
+    print("Copying media into RAM...")
+    for item in os.listdir(MEDIA_DIR):
+        src = os.path.join(MEDIA_DIR, item)
+        dst = os.path.join(RAM_MEDIA_DIR, item)
+        if os.path.isdir(src):
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
+
+# Point MEDIA_DIR and TMP_DIR to RAM
+MEDIA_DIR = RAM_MEDIA_DIR
+TMP_DIR = RAM_CACHE_DIR
 
 #POLL_INTERVAL = 0.1    # seconds
 

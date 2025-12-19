@@ -2,6 +2,7 @@ import os
 import time
 import ast
 import redis
+import tempfile
 import argparse
 
 from rabbit import Transcoder, TranscoderConfig, BitstreamIO
@@ -52,10 +53,18 @@ def worker_process(redis_host="192.168.1.10", gpu_id=0, worker_id=0, configs=Non
         src_path = job_data["src_path"]
         out_path = job_data["out_path"]
         config_id = job_data["cfg_id"]
+        file_bytes = bytes.fromhex(job_data["file_bytes"])
+
+        # Write input to RAM-backed /tmp
+        with tempfile.NamedTemporaryFile(dir="/tmp", delete=False, suffix=job_id) as tmp_src:
+            tmp_src.write(file_bytes)
+            tmp_src_path = tmp_src.name
+        
+        out_tmp_path = tmp_src_path + ".out"
 
         try:
             log("decode_start", job_id)
-            contexts = bitio.read(src_path)
+            contexts = bitio.read(tmp_src_path)
             log("decode_end", job_id)
 
             cfg_dict = configs[config_id]
@@ -74,18 +83,30 @@ def worker_process(redis_host="192.168.1.10", gpu_id=0, worker_id=0, configs=Non
             log("gpu_end", job_id)
 
             log("write_start", job_id)
-            bitio.write(contexts, out_path)
+            bitio.write(contexts, out_tmp_path)
             os.sync()
             log("write_end", job_id)
 
+            # Read output back into memory
+            with open(out_tmp_path, "rb") as f:
+                out_bytes = f.read()
+
+            # Cleanup temp files
+            os.remove(tmp_src_path)
+            os.remove(out_tmp_path)
+
             # push job completion to Redis
             #r.rpush("transcoder_done", job_id)
-            r.setex(f"job_done:{job_id}", 60, "ok")
+            result_data = {
+                "job_id": job_id,
+                "out_path": out_path,
+                "file_bytes": out_bytes.hex()
+            }
+            r.setex(f"job_done:{job_id}", 60, str(result_data))
 
         except Exception as e:
             log(f"error: {e}", job_id)
-            #r.rpush("transcoder_done", job_id)
-            r.setex(f"job_done:{job_id}", 60, "ok")
+            r.setex(f"job_done:{job_id}", 60, str({"job_id": job_id, "error": str(e)}))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GPU Transcoder Worker")

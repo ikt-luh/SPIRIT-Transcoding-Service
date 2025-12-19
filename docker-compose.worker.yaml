@@ -6,9 +6,11 @@ x-worker-common: &worker-common
   environment:
     REDIS_HOST: ${REDIS_HOST}
   volumes:
-    - /media:/media:ro
     - ./configs:/configs
-    - /media_cache:/media_cache
+  #  - /media:/media:ro
+  #  - /media_cache:/media_cache
+  tmpfs:
+    - /tmp:rw,size=1G         #
   network_mode: host
   deploy:
     resources:

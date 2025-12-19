@@ -164,10 +164,28 @@ then add the following to /etc/fstab:
 ```
 sudo apt install snapd
 sudo snap install --edge --classic just
-sudo snap set system homedirs=/userssudo snap set system homedirs=/users
+sudo snap set system homedirs=/users
 
 sudo groupadd docker
 sudo usermod -aG docker $USER
 newgrp docker
+```
 
+## MEDIA Server
+```
+git clone -b nossdav --recursive https://github.com/ikt-luh/rabbit-transcoding-service.git
+cd rabbit-transcoding-service
+
+# Start as a test
+just start-server PATH/TO/CONFIG
+```
+## GPU Servers
+```
+git clone -b nossdav --recursive https://github.com/ikt-luh/rabbit-transcoding-service.git
+cd rabbit-transcoding-service
+
+just build-pyrabbit-hw
+
+# Start as a test
+just 
 ```
