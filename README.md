@@ -159,3 +159,15 @@ then add the following to /etc/fstab:
 192.168.XX.XX:/srv/media_cache /media_cache  nfs defaults,_netdev 0 0
 ```
 
+
+# Setup
+```
+sudo apt install snapd
+sudo snap install --edge --classic just
+
+sudo groupadd docker
+sudo usermod -aG docker $USER
+newgrp docker
+
+sudo snap set system homedirs=/userssudo snap set system homedirs=/users
+```
