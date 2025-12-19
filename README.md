@@ -164,10 +164,10 @@ then add the following to /etc/fstab:
 ```
 sudo apt install snapd
 sudo snap install --edge --classic just
+sudo snap set system homedirs=/userssudo snap set system homedirs=/users
 
 sudo groupadd docker
 sudo usermod -aG docker $USER
 newgrp docker
 
-sudo snap set system homedirs=/userssudo snap set system homedirs=/users
 ```
